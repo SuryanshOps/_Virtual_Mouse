@@ -113,7 +113,7 @@ Follow these steps to deploy the AI Virtual Mouse on your local machine.
 Download the project repository to your local machine:
 ```bash
 git clone [https://github.com/yourusername/ai-virtual-mouse.git](https://github.com/yourusername/ai-virtual-mouse.git)
-cd ai-virtual-mouse
+cd _Virtual_Mouse
 ```
 
 **2. Isolate the Environment (Highly Recommended)**
