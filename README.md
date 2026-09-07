@@ -61,40 +61,56 @@ This project is built on a modular Python architecture, utilizing state-of-the-a
 
 ## 🧠 In-Depth Mechanism & Mathematics
 
-To understand how physical gestures translate into digital actions, we must break down the pipeline into four critical computational steps.
+Translating three-dimensional human motion into a precise two-dimensional digital cursor requires a robust pipeline of computer vision models, linear algebra, and digital signal processing. Here is the exact breakdown of the system's underlying logic.
 
-### 1. Neural Hand Landmark Extraction
-The webcam captures a frame (an array of pixels). This frame is converted from BGR (OpenCV's default) to RGB and passed into MediaPipe's hand tracking model. The model outputs 21 distinct `(x, y, z)` coordinates. 
+### 1. Two-Stage Neural Network Pipeline (MediaPipe)
+The system does not just "look for a hand." It uses a two-stage pipeline for extreme efficiency:
+* **BlazePalm Detector:** A lightweight model first scans the entire webcam frame to locate the bounding box of a palm.
+* **Hand Landmark Model:** Once the palm is found, this secondary model analyzes that specific cropped region to predict exactly 21 3D points `(x, y, z)`.
 
-For the Virtual Mouse, we isolate two specific nodes:
-* **Node 8:** Index Finger Tip (The Navigator)
-* **Node 4:** Thumb Tip (The Clicker)
+The model outputs normalized coordinates between `[0.0, 1.0]`. To use these, we perform **Coordinate Denormalization** based on the webcam resolution:
+* `Pixel_X = Normalized_X * Frame_Width`
+* `Pixel_Y = Normalized_Y * Frame_Height`
 
-### 2. The Virtual Boundary & Coordinate Interpolation
-A webcam might capture video at `640 x 480` resolution, while your monitor might be `1920 x 1080`. If we mapped this 1:1, you could only reach a fraction of your screen. 
+For this project, we extract **Node 8** (Index Finger Tip) for movement and **Node 4** (Thumb Tip) for clicks.
 
-To fix this, we draw a **Virtual Bounding Box** inside the webcam feed. When your finger moves within this smaller box, NumPy's interpolation function linearly scales those coordinates to the full dimensions of your monitor. This allows full-screen traversal with minimal physical arm movement.
+### 2. The Active Tracking Region (Bounding Box Interpolation)
+If we mapped the 640x480 webcam frame directly to a 1920x1080 monitor, the user would have to extend their arm wildly out of frame to reach the corners of their screen. 
 
-### 3. Euclidean Distance for Click Detection
-To determine if a user intends to click, the system continuously calculates the spatial distance between the tip of the Index Finger (Node 8) and the tip of the Thumb (Node 4). 
+To solve this, we define a smaller **Active Tracking Region** (e.g., a 400x300 rectangle) in the center of the camera feed. We then use **Linear Interpolation** to map this inner box to the full screen resolution.
 
-This is achieved using the standard Euclidean distance formula:
+The mathematical mapping function (handled by `numpy.interp`) works as follows:
+`Screen_X = ((Cam_X - Box_X1) / (Box_X2 - Box_X1)) * Screen_Width`
 
-`d = √((x2 - x1)² + (y2 - y1)²)`
+*If your finger is 50% across the Active Region, the cursor is placed exactly 50% across the Monitor.*
 
-Where:
-* `(x1, y1)` are the coordinates of the Index Finger tip.
-* `(x2, y2)` are the coordinates of the Thumb tip.
+### 3. Euclidean Distance & Hysteresis (Click State Machine)
+To register a click, we calculate the magnitude of the vector connecting the Index Finger tip `(x1, y1)` and the Thumb tip `(x2, y2)`. This is done using the standard **Euclidean Distance Formula**:
 
-When `d` falls below a rigorously tested threshold (e.g., `< 40` pixels), the system registers a "Pinch" and triggers the OS-level click event. A cooldown flag is implemented immediately after to prevent accidental rapid-fire double clicks.
+`Distance = √((x2 - x1)² + (y2 - y1)²)`
 
-### 4. Low-Pass Filtering (Jitter Stabilization)
-Because webcam feeds are subject to sensor noise and fluctuating lighting, raw coordinates jump around slightly frame-to-frame. Without smoothing, the cursor would aggressively vibrate.
+However, relying on a single threshold (e.g., click if `Distance < 40`) causes a major bug: **Click Flickering**. If the user's distance hovers exactly at 40, the system rapidly spams clicks.
 
-We apply a moving average filter to the coordinates:
+**The Solution: Hysteresis (State Debouncing)**
+We implement a state machine with two different thresholds to create a buffer zone:
+* If `Click_State` is FALSE and `Distance < 35` ➡️ Register Click, set `Click_State = TRUE`.
+* If `Click_State` is TRUE and `Distance > 55` ➡️ Reset to unclicked, set `Click_State = FALSE`.
+This ensures a deliberate pinch is required to click, and a deliberate release is required to reset it, eliminating accidental double-clicks.
+
+### 4. Exponential Moving Average (Jitter Stabilization)
+Webcam sensors are noisy. Lighting changes and pixel limitations mean that even if your hand is perfectly still, the raw coordinates will vibrate by 2-5 pixels every frame. 
+
+To give the cursor a smooth, frictionless glide, we pass the raw coordinates through an **Exponential Moving Average (EMA) Low-Pass Filter**:
+
+`Current_Position = (α * Target_Position) + ((1 - α) * Previous_Position)`
+*(Where α is the smoothing factor, usually between 0.1 and 0.3)*
+
+Alternatively written as a damping function:
 `Current_X = Previous_X + ((Target_X - Previous_X) / Smoothing_Factor)`
 
-This mathematical "drag" dampens sudden micro-movements, resulting in a cursor that feels heavy, fluid, and precise—mimicking the physical friction of a real mouse on a mousepad.
+* **Low Smoothing Factor:** Cursor is highly responsive but prone to jitter.
+* **High Smoothing Factor:** Cursor is buttery smooth but feels laggy or heavy.
+* This mathematical "drag" mimics the physical friction of a real mousepad, creating a natural user experience.
 
 ---
 
