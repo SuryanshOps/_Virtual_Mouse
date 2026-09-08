@@ -2,6 +2,11 @@
 
 # 🖱️ AI Virtual Mouse: Touchless Cursor Control
 
+<!-- Replace 'assets/demo.gif' with the path to your actual GIF once you record it -->
+<img src="assets/demo.gif" alt="AI Virtual Mouse Demo" width="700" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+
+<br>
+
 [![Python Version](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
 [![OpenCV](https://img.shields.io/badge/OpenCV-4.x-green.svg)](https://opencv.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-Latest-orange.svg)](https://google.github.io/mediapipe/)
@@ -15,14 +20,14 @@
 
 ## 📖 Table of Contents
 1. [Project Overview](#-project-overview)
-2. [Key Features](#-key-features)
-3. [System Architecture & Tech Stack](#-system-architecture--tech-stack)
-4. [In-Depth Mechanism & Mathematics](#-in-depth-mechanism--mathematics)
-5. [Prerequisites & Installation](#-prerequisites--installation)
-6. [Usage Guide](#-usage-guide)
-7. [Troubleshooting](#-troubleshooting)
-8. [Future Roadmap](#-future-roadmap)
-9. [Author](#-author)
+2. [Video Demonstration](#-video-demonstration)
+3. [Key Features](#-key-features)
+4. [System Architecture & Tech Stack](#-system-architecture--tech-stack)
+5. [In-Depth Mechanism & Mathematics](#-in-depth-mechanism--mathematics)
+6. [Prerequisites & Installation](#-prerequisites--installation)
+7. [Usage Guide](#-usage-guide)
+8. [Troubleshooting](#-troubleshooting)
+9. [Future Roadmap](#-future-roadmap)
 
 ---
 
@@ -31,6 +36,15 @@
 Traditional hardware mice have been the standard for decades, but the future of human-computer interaction lies in spatial computing and touchless interfaces. This project bridges the gap between hardware limitations and software potential by creating a **Virtual AI Mouse**. 
 
 By leveraging deep learning models for hand tracking, this application transforms any standard webcam into a highly precise, low-latency tracking device. You can navigate your operating system, browse the web, and execute clicks entirely through mid-air hand gestures. It is designed with accessibility, hygiene (touchless public kiosks), and futuristic UI experiences in mind.
+
+---
+
+## 🎥 Video Demonstration
+
+<!-- Replace YOUR_YOUTUBE_VIDEO_ID with the actual ID of your YouTube video. -->
+[![Watch the Demo](https://img.youtube.com/vi/YOUR_YOUTUBE_VIDEO_ID/maxresdefault.jpg)](https://youtu.be/YOUR_YOUTUBE_VIDEO_ID)
+
+> **Click the image above to watch the full technical walkthrough and live demonstration on YouTube!**
 
 ---
 
@@ -55,7 +69,7 @@ This project is built on a modular Python architecture, utilizing state-of-the-a
 | **OpenCV (cv2)** | Handles video I/O, frame-by-frame image processing, and drawing UI overlays on the screen. |
 | **Google MediaPipe** | Provides the pre-trained neural network for robust, real-time hand and finger landmark detection. |
 | **NumPy** | Performs high-speed array operations and mathematical interpolations for coordinate mapping. |
-| **PyAutoGUI / AutoPy** | Acts as the bridge to the Operating System, executing the actual mouse move and click commands. |
+| **PyAutoGUI** | Acts as the bridge to the Operating System, executing the actual mouse move and click commands. |
 
 ---
 
@@ -64,7 +78,7 @@ This project is built on a modular Python architecture, utilizing state-of-the-a
 Translating three-dimensional human motion into a precise two-dimensional digital cursor requires a robust pipeline of computer vision models, linear algebra, and digital signal processing. Here is the exact breakdown of the system's underlying logic.
 
 ### 1. Two-Stage Neural Network Pipeline (MediaPipe)
-The system does not just "look for a hand." It uses a two-stage pipeline for extreme efficiency:
+The system uses a two-stage pipeline for extreme efficiency:
 * **BlazePalm Detector:** A lightweight model first scans the entire webcam frame to locate the bounding box of a palm.
 * **Hand Landmark Model:** Once the palm is found, this secondary model analyzes that specific cropped region to predict exactly 21 3D points `(x, y, z)`.
 
@@ -75,14 +89,12 @@ The model outputs normalized coordinates between `[0.0, 1.0]`. To use these, we 
 For this project, we extract **Node 8** (Index Finger Tip) for movement and **Node 4** (Thumb Tip) for clicks.
 
 ### 2. The Active Tracking Region (Bounding Box Interpolation)
-If we mapped the 640x480 webcam frame directly to a 1920x1080 monitor, the user would have to extend their arm wildly out of frame to reach the corners of their screen. 
+If we mapped the `640x480` webcam frame directly to a `1920x1080` monitor, the user would have to extend their arm wildly out of frame to reach the corners of their screen. 
 
-To solve this, we define a smaller **Active Tracking Region** (e.g., a 400x300 rectangle) in the center of the camera feed. We then use **Linear Interpolation** to map this inner box to the full screen resolution.
+To solve this, we define a smaller **Active Tracking Region** (e.g., a `400x300` rectangle) in the center of the camera feed. We then use **Linear Interpolation** to map this inner box to the full screen resolution.
 
 The mathematical mapping function (handled by `numpy.interp`) works as follows:
 `Screen_X = ((Cam_X - Box_X1) / (Box_X2 - Box_X1)) * Screen_Width`
-
-*If your finger is 50% across the Active Region, the cursor is placed exactly 50% across the Monitor.*
 
 ### 3. Euclidean Distance & Hysteresis (Click State Machine)
 To register a click, we calculate the magnitude of the vector connecting the Index Finger tip `(x1, y1)` and the Thumb tip `(x2, y2)`. This is done using the standard **Euclidean Distance Formula**:
@@ -108,9 +120,7 @@ To give the cursor a smooth, frictionless glide, we pass the raw coordinates thr
 Alternatively written as a damping function:
 `Current_X = Previous_X + ((Target_X - Previous_X) / Smoothing_Factor)`
 
-* **Low Smoothing Factor:** Cursor is highly responsive but prone to jitter.
-* **High Smoothing Factor:** Cursor is buttery smooth but feels laggy or heavy.
-* This mathematical "drag" mimics the physical friction of a real mousepad, creating a natural user experience.
+This mathematical "drag" mimics the physical friction of a real mousepad, creating a natural user experience.
 
 ---
 
