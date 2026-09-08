@@ -44,10 +44,6 @@ By leveraging deep learning models for hand tracking, this application transform
 <!-- Replace YOUR_YOUTUBE_VIDEO_ID with the actual ID of your YouTube video. -->
 [![Watch the Demo](https://img.youtube.com/vi/YOUR_YOUTUBE_VIDEO_ID/maxresdefault.jpg)](https://youtu.be/YOUR_YOUTUBE_VIDEO_ID)
 
-> **Click the image above to watch the full technical walkthrough and live demonstration on YouTube!**
-
----
-
 ## ✨ Key Features
 
 * **Real-Time Hand Tracking:** Detects 21 3D hand landmarks in milliseconds using optimized machine learning models.
